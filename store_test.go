@@ -112,7 +112,7 @@ var _ = Describe("Store", func() {
 	})
 
 	Describe("Put() and Get() on goroutine", func() {
-		It("Should be goroutine-safe", func() {
+		It("Should be goroutine-safe", func(done Done) {
 			var wg sync.WaitGroup
 
 			rand.Seed(time.Now().UnixNano())
@@ -120,6 +120,9 @@ var _ = Describe("Store", func() {
 			for i := 0; i < 1000; i++ {
 				wg.Add(1)
 				go func() {
+					defer GinkgoRecover()
+					defer wg.Done()
+
 					switch rand.Intn(3) {
 					case 0:
 						err = s.Put(store.Byte(DefaultKeyString), "42")
@@ -128,17 +131,18 @@ var _ = Describe("Store", func() {
 						var val string
 						err = s.Get(store.Byte(DefaultKeyString), &val)
 						if err != nil && err != store.ErrKeyNotExist {
-							Expect(err).NotTo(HaveOccurred())
+							Expect(err).To(HaveOccurred())
+							return
 						}
 						Expect(val).To(Equal("42"))
 					case 2:
 						err = s.Delete(store.Byte(DefaultKeyString))
 						Expect(err).NotTo(HaveOccurred())
 					}
-					wg.Done()
 				}()
 			}
 			wg.Wait()
+			close(done)
 		})
 	})
 

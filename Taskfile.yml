@@ -1,0 +1,53 @@
+version: '2'
+
+vars:
+  Dir:
+    sh: basename "$PWD"
+
+tasks:
+  default:
+    cmds:
+      - task: test
+
+  clean:
+    desc: Cleanup the build artifacts.
+    cmds:
+      - echo "Cleaning ..."
+      - rm -rf bin/ *.html *.out | exit 0;
+
+  install:
+    desc: Install all dependencies.
+    cmds:
+      - echo "Installing Dependencies ..."
+      - go get -u github.com/tcnksm/ghr
+      - go get -u github.com/mitchellh/gox
+      - go get -u github.com/golang/dep/cmd/dep
+      - go get -u github.com/alecthomas/gometalinter
+      - go get -u github.com/kisielk/errcheck
+
+  test:
+    desc: Run all the go tests.
+    cmds:
+      - go test -v -race ./...
+
+  cov:
+    desc: Generate test converage.
+    cmds:
+      - go test -v -cover -coverprofile=c.out
+      - go tool cover -html=c.out -o coverage.html
+
+  vet:
+    desc: Reports suspicious code.
+    cmds:
+      - go vet ./...
+
+  lint:
+    desc: Run all the linters.
+    cmds:
+      - gometalinter --disable-all --enable=errcheck --enable=vet --enable=vetshadow ./...
+
+  ci:
+    desc: Run it like Volkswagen.
+    cmds:
+      - task: test
+      - task: lint
