@@ -1,7 +1,10 @@
 package store_test
 
 import (
+	"math/rand"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/andersnormal/store"
 	. "github.com/onsi/ginkgo"
@@ -89,6 +92,53 @@ var _ = Describe("Store", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(val.Int).To(Equal(42))
 			Expect(val.String).To(Equal("42"))
+		})
+	})
+
+	Describe("Put() and Get() on nil", func() {
+		It("Should not allow to Put() nil value", func() {
+			err = s.Put(store.Byte(DefaultKeyString), nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(store.ErrBadValue))
+		})
+
+		It("Should allow to Get() nil value", func() {
+			err = s.Put(store.Byte(DefaultKeyString), "42")
+			Expect(err).NotTo(HaveOccurred())
+
+			err = s.Get(store.Byte(DefaultKeyString), nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("Put() and Get() on goroutine", func() {
+		It("Should be goroutine-safe", func() {
+			var wg sync.WaitGroup
+
+			rand.Seed(time.Now().UnixNano())
+
+			for i := 0; i < 1000; i++ {
+				wg.Add(1)
+				go func() {
+					switch rand.Intn(3) {
+					case 0:
+						err = s.Put(store.Byte(DefaultKeyString), "42")
+						Expect(err).NotTo(HaveOccurred())
+					case 1:
+						var val string
+						err = s.Get(store.Byte(DefaultKeyString), &val)
+						if err != nil && err != store.ErrKeyNotExist {
+							Expect(err).NotTo(HaveOccurred())
+						}
+						Expect(val).To(Equal("42"))
+					case 2:
+						err = s.Delete(store.Byte(DefaultKeyString))
+						Expect(err).NotTo(HaveOccurred())
+					}
+					wg.Done()
+				}()
+			}
+			wg.Wait()
 		})
 	})
 
