@@ -16,8 +16,8 @@ install:
   - go install github.com/onsi/ginkgo/ginkgo
 
 go:
-  - 1.8
   - 1.9
+  - 1.10
 
 script:
   - go test
